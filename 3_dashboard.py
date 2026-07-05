@@ -1,4 +1,6 @@
 import gdown
+import os
+import gc
 import pydeck as pdk
 import streamlit as st
 import pandas as pd
@@ -11,8 +13,6 @@ from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from sklearn.metrics import mean_squared_error, r2_score
-import os
-import gc
 
 # ==========================================
 # 1. PAGE CONFIG & PRO CUSTOM CSS
