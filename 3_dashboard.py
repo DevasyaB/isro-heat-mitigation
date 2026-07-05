@@ -11,8 +11,8 @@ from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from sklearn.metrics import mean_squared_error, r2_score
-
 import os
+import gc
 
 # ==========================================
 # 1. PAGE CONFIG & PRO CUSTOM CSS
@@ -63,42 +63,50 @@ st.divider()
 # 2. BULLETPROOF DATA & MODEL LOADING
 # ==========================================
 @st.cache_resource
+import gc # Garbage collector to free up RAM
+
+@st.cache_resource
 def load_assets():
-    model_path = "urban_heat_temporal_model.json"
+    # 1. CHANGE TO .ubj
+    model_path = "urban_heat_temporal_model.ubj" 
     data_path = "India_1Million_Temporal_9D_Data.csv"
     
-    # 1. Download Model from Google Drive if it's missing
     if not os.path.exists(model_path):
-        json_id = "1MMkSz2CrFfnX8mQ5ufXXkZEaAvoexFdC" # Your JSON ID
-        url = f'https://drive.google.com/uc?id={json_id}'
+        # 2. PUT YOUR NEW .ubj GOOGLE DRIVE ID HERE!
+        ubj_id = "19BGrK-thH3c4xRNNT7gcve5aYojOrruq" 
+        url = f'https://drive.google.com/uc?id={ubj_id}'
         gdown.download(url, model_path, quiet=False)
         
-    # 2. Download CSV from Google Drive if it's missing
     if not os.path.exists(data_path):
-        csv_id = "1D2Xtxy1PoQzR9tM0U_pPOb8ZustZzQKp" # <--- PUT YOUR CSV FILE ID HERE!
+        csv_id = "1D2Xtxy1PoQzR9tM0U_pPOb8ZustZzQKp" # Your working CSV ID
         url = f'https://drive.google.com/uc?id={csv_id}'
         gdown.download(url, data_path, quiet=False)
 
     features = ['NDVI_Greenness', 'NDBI_BuiltUp', 'elevation', 'Wind_Speed', 'Dewpoint_C', 'ECOSTRESS_LST', 'GHSL_Urban_Form', 'Pollution_CPCB_Proxy', 'Year']
     
     if not os.path.exists(model_path) or not os.path.exists(data_path):
-         return None, None, 0.0, 0.0, "⚠️ Failed to download files from Google Drive. Check file IDs and sharing permissions."
+         return None, None, 0.0, 0.0, "⚠️ Failed to download files."
 
     model = xgb.XGBRegressor()
     try:
+        # The .ubj binary will load instantly without crashing the server!
         model.load_model(model_path)
         model.get_booster().feature_names = features
         
-        df = pd.read_csv(data_path, nrows=15000)
+        # 3. Only load 2,500 rows to save massive amounts of RAM
+        df = pd.read_csv(data_path, nrows=2500)
         df = df.dropna(subset=features + ['LST_Celsius'])
-        df = df[(df['LST_Celsius'] >= 25.0) & (df['LST_Celsius'] <= 55.0)]
         
         X = df[features].to_numpy()
         y = df['LST_Celsius'].to_numpy()
         
-        preds = model.predict(X[:5000]) 
-        rmse = np.sqrt(mean_squared_error(y[:5000], preds))
-        r2 = r2_score(y[:5000], preds)
+        preds = model.predict(X) 
+        rmse = np.sqrt(mean_squared_error(y, preds))
+        r2 = r2_score(y, preds)
+        
+        # 4. AGGRESSIVELY CLEAR MEMORY
+        del X, y, preds
+        gc.collect() 
         
         return model, df, rmse, r2, None
     except Exception as e:
@@ -412,3 +420,4 @@ with tab5:
         mime="text/csv",
         use_container_width=True
     )
+
