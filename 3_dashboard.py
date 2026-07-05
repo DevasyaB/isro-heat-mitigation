@@ -63,9 +63,7 @@ st.divider()
 # 2. BULLETPROOF DATA & MODEL LOADING
 # ==========================================
 @st.cache_resource
-import gc # Garbage collector to free up RAM
 
-@st.cache_resource
 def load_assets():
     # 1. CHANGE TO .ubj
     model_path = "urban_heat_temporal_model.ubj" 
