@@ -89,7 +89,7 @@ def load_assets():
         model.load_model(model_path)
         model.get_booster().feature_names = features
         
-        df = pd.read_csv(data_path)
+        df = pd.read_csv(data_path, nrows=15000)
         df = df.dropna(subset=features + ['LST_Celsius'])
         df = df[(df['LST_Celsius'] >= 25.0) & (df['LST_Celsius'] <= 55.0)]
         
